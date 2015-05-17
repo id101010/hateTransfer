@@ -10,3 +10,10 @@ Yes, this script is strictly intended for death metal, hence the name. ;)
 hateTransfer [list of music to transfer]
 
 e.g.: $ hateTransfer "Six Feet Under" Aborted Acranius "God Dethroned"
+
+## Requirements
+Android Phone (Tested on cyanogenmod 12+)
+    - busybox
+Computer
+    - adb
+    - mp3fs
