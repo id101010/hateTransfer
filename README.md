@@ -12,8 +12,9 @@ hateTransfer [list of music to transfer]
 e.g.: $ hateTransfer "Six Feet Under" Aborted Acranius "God Dethroned"
 
 ## Requirements
-Android Phone (Tested on cyanogenmod 12+)
-    - busybox
-Computer
-    - adb
-    - mp3fs
+On Android Phone (Tested on cyanogenmod 12+)
+* busybox
+
+On Computer
+* adb
+* mp3fs
