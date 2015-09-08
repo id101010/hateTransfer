@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Transfers all your finest death metal to your phone!;-)
+# Transfers all your finest death metal to your phone!
 #
 # Usage: hateTransfer [List of Music]
 #
@@ -36,7 +36,7 @@ fi
 # Perform some error checks and upload the music to the phone
 for arg in "$@"
 do
-    FILE="${ANDROIDLIB}$(echo ${arg}| sed 's/ /\\ /g')/"
+    FILE="${ANDROIDLIB}${arg}"
 
     if [ -d "${MP3LIB}${arg}" ]
     then
