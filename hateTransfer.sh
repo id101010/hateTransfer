@@ -7,6 +7,7 @@
 #
 # Example: hateTransfer "Swallow the Sun" "Spawn of Possession" ...
 #
+# TODO: Helpfile
 
 # Some options
 QUALITY="-b 320 --quality=0"
@@ -17,6 +18,25 @@ ANDROIDLIB="/mnt/sdcard/Music/"
 # Some useful variables
 NOT_PRESENT="List of devices attached"
 ADB_FOUND=$(adb devices | tail -2 | head -1 | cut -f 1 | sed 's/ *$//g')
+
+# functions ------------------------------------------------------------------------
+die(){
+    # Cleanup
+    kill `pgrep mp3fs`
+    kill `pgrep adb`
+
+    # Exit with error
+    exit 1
+}
+
+cleanup(){
+    # Cleanup
+    kill `pgrep mp3fs`
+    kill `pgrep adb`
+
+    # Exit with error
+    exit 1
+}
 
 # Create mp3fs mountpoint if it isn't already there ---------------------------------
 if [ ! -d ${MP3LIB} ]
@@ -45,7 +65,7 @@ fi
 if [ "${ADB_FOUND}" == "${NOT_PRESENT}" ] 
 then
 	echo -e "[\033[31m:(\033[m] Android device seems to be missing."
-	exit 1
+	die
 else
 	echo -e "[\033[32m:)\033[m] Android device ${ADB_FOUND} found."
 fi
@@ -58,7 +78,7 @@ do
         echo -e "[\033[32m:)\033[m] Folder \033[93m${arg}\033[m exists in your library."
     else
         echo -e "[\033[31m:(\033[m] Folder \033[93m${arg}\033[m doesn't exist in your library!"
-        exit 1
+        die
     fi
 done
 
@@ -72,7 +92,7 @@ then
     echo -e "[\033[32m:)\033[m] Enough Space on the device. Free=$FREE[MB] Needed=$NEED[MB]."
 else
     echo -e "[\033[31m:(\033[m] Not enough space left. Free=$FREE[MB] Needed=$NEED[MB]."
-    exit 1
+    die
 fi
 
 # For each given folder check if its already on the phone
@@ -91,14 +111,11 @@ do
         echo -e "[\033[31m:(\033[m] \033[93m${arg}\033[m Already uploaded, skipping!"
     else
         echo -e "[\033[32m:)\033[m] \033[93m${arg}\033[m Doesn't exist on phone!"
-        echo -e "[\033[32m:)\033[m] Uploading [${CURR_FILE_LIB}] to [${CURR_FILE_AND}]"
+        echo -e "[\033[32m:)\033[m] Uploading \033[94m${CURR_FILE_LIB}\033[m to \033[94m${CURR_FILE_AND}\033[m"
         echo -e "\033[94m"
         adb push "${CURR_FILE_LIB}" "${CURR_FILE_AND}"
         echo -e "\033[m"
     fi
-        
 done
 
-# Cleanup
-kill `pgrep mp3fs`
-kill `pgrep adb`
+cleanup
