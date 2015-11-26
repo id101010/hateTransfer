@@ -20,10 +20,18 @@ NOT_PRESENT="List of devices attached"
 ADB_FOUND=$(adb devices | tail -2 | head -1 | cut -f 1 | sed 's/ *$//g')
 
 # functions ------------------------------------------------------------------------
+usage()
+{
+cat << EOF
+Usage: $0 [list]
+This script helps you to convert and upload lossless music to your android phone in one single step.
+EOF
+}
+
 die(){
     # Cleanup
-    kill `pgrep mp3fs`
-    kill `pgrep adb`
+    kill "$(pgrep mp3fs)"
+    kill "$(pgrep adb)"
 
     # Exit with error
     exit 1
@@ -31,12 +39,19 @@ die(){
 
 cleanup(){
     # Cleanup
-    kill `pgrep mp3fs`
-    kill `pgrep adb`
+    kill "$(pgrep mp3fs)"
+    kill "$(pgrep adb)"
 
-    # Exit with error
-    exit 1
+    # Exit with success
+    exit 0
 }
+
+# Check if there are any arguments given
+if [ "${#}" == "0" ]
+then
+    usage
+    exit 1
+fi
 
 # Create mp3fs mountpoint if it isn't already there ---------------------------------
 if [ ! -d ${MP3LIB} ]
