@@ -3,133 +3,126 @@
 # Convert and transfer your FLAC music to an android phone in one single step!
 #
 # The script assumes that you have a music library of the following form:
-# $(MUSIC_DIR)/Interpret/Album
+# $(MP4LIB)/Interpret/Album
 #
 # Example: hateTransfer "Swallow the Sun" "Spawn of Possession" ...
 #
 # TODO: Helpfile
 
 # Some options
-QUALITY="-b 320 --quality=0"
-MP3LIB="/home/${USER}/mp3fs/"
-FLACLIB="/home/${USER}/Music/"
-ANDROIDLIB="/mnt/sdcard/Music/"
+DEBUG=${DEBUG-false}
+QUALITY=${QUALITY-"-b 320 --quality=0"}
+MP3LIB=${MP3LIB-"${HOME}/mp3fs/"}
+FLACLIB=${FLACLIB-"${HOME}/Music/"}
+ANDROIDLIB=${ANDROIDLIB-"/mnt/sdcard/Music/"}
 
 # Some useful variables
-NOT_PRESENT="List of devices attached"
-ADB_FOUND=$(adb devices | tail -2 | head -1 | cut -f 1 | sed 's/ *$//g')
+ADB_FOUND=$(adb devices | sed -nre 's/^([^\s]+)\s+device.*/\1/pg')
 
-# functions ------------------------------------------------------------------------
-usage()
-{
+#Colors 
+RESTORE='\033[0m'
+
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+YELLOW='\033[00;33m'
+BLUE='\033[00;34m'
+PURPLE='\033[00;35m'
+CYAN='\033[00;36m'
+LIGHTGRAY='\033[00;37m'
+
+LRED='\033[01;31m'
+LGREEN='\033[01;32m'
+LYELLOW='\033[01;33m'
+LBLUE='\033[01;34m'
+LPURPLE='\033[01;35m'
+LCYAN='\033[01;36m'
+WHITE='\033[01;37m'
+
+usage() {
 cat << EOF
-Usage: $0 [list]
-This script helps you to convert and upload lossless music to your android phone in one single step.
+    Usage: $0 [list]
+    This script helps you convert and upload lossless music to your android phone in one single step.
+
+    ENVIRONMENT:
+        DEBUG       : set to true for debug output [${DEBUG}]
+        QUALITY     : quality options [${QUALITY}]
+        MP3LIB      : path to your mp3fs [${MP3LIB}]
+        FLACLIB     : path to yoru flac library [${FLACLIB}]
+        ANDROIDLIB  : path to your mounted andorid [${ANDROIDLIB}]
+    
 EOF
 }
 
-die(){
+cleanup() {
     # Cleanup
-    kill "$(pgrep mp3fs)"
-    kill "$(pgrep adb)"
+    pkill mp3fs
+    pkill adb
+}
 
-    # Exit with error
+debug() {
+    if ${DEBUG}; then
+        echo -e "${YELLOW}$*${RESTORE}"
+    fi
+}
+
+error() {
+    echo -e "${RED}$*${RESTORE}"
+    cleanup
     exit 1
 }
 
-cleanup(){
-    # Cleanup
-    kill "$(pgrep mp3fs)"
-    kill "$(pgrep adb)"
-
-    # Exit with success
-    exit 0
+null() {
+    "$@" &>/dev/null
 }
 
 # Check if there are any arguments given
-if [ "${#}" == "0" ]
-then
+if (( ${#} == 0 )); then
     usage
-    exit 1
+    error "Invalid argument count: ${#}"
 fi
 
-# Create mp3fs mountpoint if it isn't already there ---------------------------------
-if [ ! -d ${MP3LIB} ]
-then
-    mkdir ${MP3LIB}
-fi
+# Create environment
+mkdir -p "${MP3LIB}" "${FLACLIB}"
 
-# Check if mp3fs is running ---------------------------------------------------------
-if [ -z "$(pgrep mp3fs)" ]
-then
-    echo -e "[\033[32m:)\033[m] starting mp3fs."
+# Check if mp3fs is running
+if ! null pgrep mp3fs; then
+    debug "Starting mp3fs."
     mp3fs ${QUALITY} ${FLACLIB} ${MP3LIB}
-else
-    echo -e "[\033[32m:)\033[m] mp3fs is running."
 fi
 
-# Check if adb is running -----------------------------------------------------------
-if [ -z "$(pgrep adb)" ]
-then
+# Check@if adb is running
+if ! null pgrep adb; then
+    debug "starting adb server"
     adb start-server
-else
-    echo -e "[\033[32m:)\033[m] adb server is running."
 fi
 
-# Check if any android device is connected ------------------------------------------
-if [ "${ADB_FOUND}" == "${NOT_PRESENT}" ] 
-then
-	echo -e "[\033[31m:(\033[m] Android device seems to be missing."
-	die
+# Check if any android device is connected
+if [ ! "${ADB_FOUND}" ]; then
+    error "android device seems to be missing"
 else
-	echo -e "[\033[32m:)\033[m] Android device ${ADB_FOUND} found."
+    debug "android device ${ADB_FOUND} found"
 fi
 
-# Check if each folder exists in your library ----------------------------------------
-for arg in "$@"
-do
-    if [ -d "${MP3LIB}${arg}" ]
-    then
-        echo -e "[\033[32m:)\033[m] Folder \033[93m${arg}\033[m exists in your library."
-    else
-        echo -e "[\033[31m:(\033[m] Folder \033[93m${arg}\033[m doesn't exist in your library!"
-        die
+# Transfer
+for arg in "$@"; do
+    src="${MP3LIB}/${arg}"
+    dst="${ANDROIDLIB}/${arg}"
+    if [ ! -d "${src}" ]; then
+        error "folder '${src}' doesn't exist"
     fi
-done
-
-# Check if there is enough space on the device --------------------------------------
-cd ${MP3LIB}
-NEED=$(du -hcs "${@}" | tail -1 | awk '{print $1}' | sed 's/[^0-9]*//g')
-FREE=$(adb shell busybox df -m | tail -1 | awk '{print $4}')
-
-if [ "$FREE" \> "$NEED" ]
-then
-    echo -e "[\033[32m:)\033[m] Enough Space on the device. Free=$FREE[MB] Needed=$NEED[MB]."
-else
-    echo -e "[\033[31m:(\033[m] Not enough space left. Free=$FREE[MB] Needed=$NEED[MB]."
-    die
-fi
-
-# For each given folder check if its already on the phone
-# If not, upload it
-for arg in "$@"
-do
-    # Assemble paths and escape the android path for the sh shell
-    CURR_FILE_AND="${ANDROIDLIB}${arg}"
-    CURR_FILE_LIB="${MP3LIB}${arg}"
-    FILE="$(echo ${CURR_FILE_AND} | sed 's/ /\\ /g')"
-    CHECK=$(adb shell "if [ -e "${FILE}" ]; then echo -n "err"; else echo -n  "ok"; fi")
+    need=$(du -hcs "${src}" | tail -1 | awk '{print $1}' | sed -nre 's/^([0-9]+).*/\1/pg')
+    free=$(adb shell busybox df -m | tail -1 | awk '{print $4}')
+    if (( $need >= $free )); then
+        error "not enough space left. Free=$FREE[MiB] Needed=$need[MB]."
+    fi
+    exists_on_dst=$(adb shell "if [ -e '${dst}' ]; then echo exists; fi")
 
     # Only opload if the folder doesn't exist
-    if [ ${CHECK} == "err" ] 
-    then
-        echo -e "[\033[31m:(\033[m] \033[93m${arg}\033[m Already uploaded, skipping!"
+    if [ ${exists_on_dst} ]; then
+        debug "${arg} already uploaded, skipping"
     else
-        echo -e "[\033[32m:)\033[m] \033[93m${arg}\033[m Doesn't exist on phone!"
-        echo -e "[\033[32m:)\033[m] Uploading \033[94m${CURR_FILE_LIB}\033[m to \033[94m${CURR_FILE_AND}\033[m"
-        echo -e "\033[94m"
-        adb push "${CURR_FILE_LIB}" "${CURR_FILE_AND}"
-        echo -e "\033[m"
+        debug "uploading ${src} to ${dst}"
+        adb push "${src}" "${dst}"
     fi
 done
 
