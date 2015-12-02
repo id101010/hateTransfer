@@ -1,6 +1,6 @@
 # hateTransfer
 
-_A fork of the hateTransfer-script which makes the script actully usable_
+_A fork of the hateTransfer-script which makes the script actually usable_
 
 ![Example use](https://github.com/id101010/hateTransfer/blob/master/doc/screen.png)
 
