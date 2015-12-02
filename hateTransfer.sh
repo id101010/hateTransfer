@@ -3,7 +3,7 @@
 # Convert and transfer your FLAC music to an android phone in one single step!
 #
 # The script assumes that you have a music library of the following form:
-# $(MP4LIB)/Interpret/Album
+# $(MP3LIB)/Interpret/Album
 #
 # Example: hateTransfer "Swallow the Sun" "Spawn of Possession" ...
 #
@@ -78,7 +78,7 @@ null() {
 # Check if there are any arguments given
 if (( ${#} == 0 )); then
     usage
-    error "Invalid argument count: ${#}"
+    error "invalid argument count: ${#}"
 fi
 
 # Create environment
@@ -86,7 +86,7 @@ mkdir -p "${MP3LIB}" "${FLACLIB}"
 
 # Check if mp3fs is running
 if ! null pgrep mp3fs; then
-    debug "Starting mp3fs."
+    debug "starting mp3fs"
     mp3fs ${QUALITY} ${FLACLIB} ${MP3LIB}
 fi
 
@@ -108,12 +108,12 @@ for arg in "$@"; do
     src="${MP3LIB}/${arg}"
     dst="${ANDROIDLIB}/${arg}"
     if [ ! -d "${src}" ]; then
-        error "folder '${src}' doesn't exist"
+        error "folder: ${src} doesn't exist"
     fi
     need=$(du -hcs "${src}" | tail -1 | awk '{print $1}' | sed -nre 's/^([0-9]+).*/\1/pg')
     free=$(adb shell busybox df -m | tail -1 | awk '{print $4}')
     if (( $need >= $free )); then
-        error "not enough space left. Free=$FREE[MiB] Needed=$need[MB]."
+        error "not enough space left free: ${free} MiB needed: ${need} MiB"
     fi
     exists_on_dst=$(adb shell "if [ -e '${dst}' ]; then echo exists; fi")
 
