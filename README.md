@@ -1,5 +1,7 @@
 # hateTransfer
 
+_A fork of the hateTransfer-script which makes the script actually usable_
+
 ![Example use](https://github.com/id101010/hateTransfer/blob/master/doc/screen.png)
 
 A little skript which helps you to convert and upload lossless music to your android phone in one single step!
